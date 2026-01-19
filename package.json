@@ -1,0 +1,47 @@
+{
+  "name": "expense-tracker",
+  "version": "1.0.0",
+  "description": "Offline-first expense tracker desktop app",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "build": "cd Expense-Tracker-Frontend && npm run build",
+    "electron:dev": "set ELECTRON_START_URL=http://localhost:3000 && npx electron .",
+    "electron:preview": "npm run build && npx electron .",
+    "electron:dist": "npm run build && electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.kauan.expensetracker",
+    "productName": "Expense Tracker",
+    "asar": true,
+    "files": [
+      "electron/**/*",
+      "Expense-Tracker-Frontend/dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kauan231/Expense-Tracker.git"
+  },
+  "author": "Kauan Ramos",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kauan231/Expense-Tracker/issues"
+  },
+  "homepage": "https://github.com/Kauan231/Expense-Tracker#readme",
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

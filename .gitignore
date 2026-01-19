@@ -137,3 +137,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+Expense-Tracker-Frontend/
+Expense-Tracker-Backend/
