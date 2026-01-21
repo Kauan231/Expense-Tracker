@@ -1,76 +1,221 @@
-console.log("ELECTRON MAIN STARTED");
-
-const { app, BrowserWindow } = require("electron");
-const path = require("path");
+const { app, BrowserWindow, dialog } = require("electron");
+const { fork } = require("child_process");
 const express = require("express");
-const { spawn } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 
-let backendProcess;
+const logDir = process.env.BACKEND_LOG_DIR ?? require("os").tmpdir();
 
-function createWindow() {
-  const uploadsPath = app.getPath('userData');
+const logFile = path.join(logDir, "backend.log");
 
-  // ─── Start backend ─────────────────────────────────────────────
-  const backend = spawn("node", ["index.js"], {
-    cwd: path.join(__dirname, "../Expense-Tracker-Backend"),
-    shell: true,
+function log(...args) {
+  const msg =
+    new Date().toISOString() + " " + args.map(a =>
+      typeof a === "string" ? a : JSON.stringify(a)
+    ).join(" ") + "\n";
+
+  fs.appendFileSync(logFile, msg);
+}
+
+log("ELECTRON MAIN STARTED");
+
+const configPath = path.join(app.getPath("userData"), "config.json");
+
+function loadConfig() {
+  if (!fs.existsSync(configPath)) return {};
+  return JSON.parse(fs.readFileSync(configPath, "utf-8"));
+}
+
+function saveConfig(config) {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
+async function chooseUploadsDir() {
+  const result = await dialog.showOpenDialog({
+    title: "Choose where ExpenseTracker will store documents",
+    properties: ["openDirectory", "createDirectory"],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+
+  const config = loadConfig();
+  config.customUploadsDir = result.filePaths[0];
+  saveConfig(config);
+
+  return result.filePaths[0];
+}
+
+async function resolveUploadsPath() {
+  const config = loadConfig();
+
+  if (config.customUploadsDir && fs.existsSync(config.customUploadsDir)) {
+    return path.join(config.customUploadsDir, "uploads");
+  }
+
+  const chosen = await chooseUploadsDir();
+  if (chosen) return path.join(chosen, "uploads");
+
+  return path.join(app.getPath("userData"), "uploads");
+}
+
+function startBackend(uploadsPath) {
+  if (backendProcess) return;
+
+  const backendEntry = app.isPackaged
+    ? path.join(process.resourcesPath, "backend", "index.js")
+    : path.join(__dirname, "../backend/index.js");
+
+  if (!fs.existsSync(backendEntry)) {
+    log("BACKEND ENTRY NOT FOUND:", backendEntry);
+    return;
+  }
+
+  log("Starting backend with fork:", backendEntry);
+
+  backendProcess = fork(backendEntry, [], {
+    cwd: path.dirname(backendEntry),
     env: {
       ...process.env,
       UPLOADS_DIR: uploadsPath,
+      BACKEND_LOG_DIR: path.dirname(backendEntry),
     },
+    stdio: "pipe",
   });
 
-  backend.stdout.on("data", (data) => {
-    console.log("[BACKEND STDOUT]", data.toString());
+  backendProcess.on("message", msg => {
+    log("[BACKEND MESSAGE]", msg);
   });
 
-  backend.stderr.on("data", (data) => {
-    console.error("[BACKEND STDERR]", data.toString());
+  backendProcess.on("exit", (code, signal) => {
+    log("BACKEND EXITED", { code, signal });
+    backendProcess = null;
   });
 
-  backend.on("exit", (code) => {
-    console.log("[BACKEND EXIT]", code);
+  backendProcess.on("error", err => {
+    log("BACKEND FORK ERROR:", err);
   });
 
-  // ─── Serve frontend ────────────────────────────────────────────
-  const server = express();
-
-  const distPath = path.join(
-    __dirname,
-    "../Expense-Tracker-Frontend/dist"
+  backendProcess.stdout?.on("data", d =>
+    log("[BACKEND STDOUT]", d.toString())
   );
 
-  server.use(express.static(distPath));
+  backendProcess.stderr?.on("data", d =>
+    log("[BACKEND STDERR]", d.toString())
+  );
+}
 
-  server.get(/.*/, (_, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
+function waitForBackend(port, timeout = 20000) {
+  return new Promise((resolve, reject) => {
+    const net = require("net");
+    const start = Date.now();
 
-  const PORT = 5174;
+    const check = () => {
+      const socket = new net.Socket();
 
-  server.listen(PORT, () => {
-    const win = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    });
+      socket
+        .once("error", () => {
+          socket.destroy();
+          if (Date.now() - start > timeout) {
+            reject(new Error("Backend did not become ready"));
+          } else {
+            setTimeout(check, 300);
+          }
+        })
+        .connect(port, "127.0.0.1", () => {
+          socket.end();
+          resolve();
+        });
+    };
 
-    win.loadURL(`http://localhost:${PORT}`);
-    win.webContents.openDevTools();
+    check();
   });
 }
 
-// ─── Electron lifecycle ──────────────────────────────────────────
-app.whenReady().then(createWindow);
+function startFrontendServer() {
+  if (frontendServer) return Promise.resolve(5174);
 
-app.on("window-all-closed", () => {
-  if (backendProcess) backendProcess.kill();
-  if (process.platform !== "darwin") app.quit();
+  return new Promise((resolve) => {
+    const server = express();
+
+    const distPath = path.join(
+      __dirname,
+      "../frontend/dist"
+    );
+
+    server.use(express.static(distPath));
+    server.get(/.*/, (_, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+
+    const PORT = 5174;
+
+    frontendServer = server.listen(PORT, () => {
+      log("Frontend running on port", PORT);
+      resolve(PORT);
+    });
+  });
+}
+
+async function createWindow() {
+  if (mainWindow) return;
+
+  const uploadsPath = await resolveUploadsPath();
+  fs.mkdirSync(uploadsPath, { recursive: true });
+
+  log("UPLOADS_DIR =", uploadsPath);
+
+  startBackend(uploadsPath);
+
+  try {
+    await waitForBackend(3000);
+    log("Backend is ready");
+  } catch (err) {
+    log(err.message);
+  }
+  const frontendPort = await startFrontendServer();
+
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  await mainWindow.loadURL(`http://localhost:${frontendPort}`);
+
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
+}
+
+let mainWindow = null;
+let backendProcess = null;
+let frontendServer = null;
+
+const gotLock = app.requestSingleInstanceLock();
+
+if (!gotLock) {
+  app.quit();
+  return;
+}
+
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
 });
+
+app.whenReady().then(createWindow);
 
 app.on("before-quit", () => {
   if (backendProcess) backendProcess.kill();
+  if (frontendServer) frontendServer.close();
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
