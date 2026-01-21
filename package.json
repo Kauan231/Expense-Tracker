@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "build": "cd Expense-Tracker-Frontend && npm run build",
+    "build": "cd frontend && npm run build",
     "electron:dev": "set ELECTRON_START_URL=http://localhost:3000 && npx electron .",
     "electron:preview": "npm run build && npx electron .",
     "electron:dist": "npm run build && electron-builder",
@@ -16,8 +16,8 @@
     "productName": "Expense Tracker",
     "asar": true,
     "files": [
-      "electron/**/*",
-      "Expense-Tracker-Frontend/dist/**/*",
+      "electron/**",
+      "frontend/dist/**",
       "package.json"
     ],
     "directories": {
@@ -25,7 +25,13 @@
     },
     "win": {
       "target": "nsis"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend"
+      }
+    ]
   },
   "repository": {
     "type": "git",
