@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, Notification  } = require("electron");
 const { fork } = require("child_process");
 const express = require("express");
 const fs = require("fs");
@@ -15,9 +15,27 @@ function log(...args) {
     ).join(" ") + "\n";
 
   fs.appendFileSync(logFile, msg);
+
+  if (!app.isPackaged) {
+      console.log(msg);
+  }
 }
 
 log("ELECTRON MAIN STARTED");
+
+function notify(title, body) {
+  log("[NOTIFY]", {title, body});
+
+  if (!Notification.isSupported()) {
+    log("Notifications not supported on this OS");
+    return;
+  }
+
+  new Notification({
+    title,
+    body
+  }).show();
+}
 
 const configPath = path.join(app.getPath("userData"), "config.json");
 
@@ -84,6 +102,10 @@ function startBackend(uploadsPath) {
 
   backendProcess.on("message", msg => {
     log("[BACKEND MESSAGE]", msg);
+    if (msg?.type === "notify") {
+      const { title, body } = msg.payload;
+      notify(title, body);
+    }
   });
 
   backendProcess.on("exit", (code, signal) => {
