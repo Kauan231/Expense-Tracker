@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = git@github.com:Kauan231/Expense-Tracker-Backend.git
+[submodule "frontend"]
+	path = frontend
+	url = git@github.com:Kauan231/Expense-Tracker-Frontend.git
