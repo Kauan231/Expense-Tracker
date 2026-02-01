@@ -4,6 +4,10 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.kauan.expensetracker");
+}
+
 const logDir = process.env.BACKEND_LOG_DIR ?? require("os").tmpdir();
 
 const logFile = path.join(logDir, "backend.log");
