@@ -28,16 +28,6 @@ ExpenseTracker is a project I built to solve a personal need: keeping all my rec
 
 ---
 
-## 📦 Windows Installer
-
-A ready-to-use Windows installer is available inside:
-
-```bash
-builds/
-```
-
----
-
 ## 🚀 Building the App Manually
 
 To install dependencies and generate the desktop build:
@@ -85,18 +75,6 @@ O **ExpenseTracker** é um projeto que criei para resolver uma necessidade pesso
 - ⏰ Controle de pagamentos pendentes  
 - 💾 Aplicação offline-first com SQLite local  
 - 🖥️ Aplicativo desktop para Windows (Electron)
-
----
-
-## 📦 Instalador Windows
-
-O instalador já gerado está disponível em:
-
-```bash
-builds/
-```
-
----
 
 ## 🚀 Gerar Build Manualmente
 
