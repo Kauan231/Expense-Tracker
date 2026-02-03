@@ -6,8 +6,8 @@
   "private": true,
   "scripts": {
     "build": "cd frontend && npm run build",
-    "electron:dev": "set ELECTRON_START_URL=http://localhost:3000 && npx electron .",
-    "electron:preview": "npm run build && npx electron .",
+    "electron:dev": "npx electron .",
+    "electron:preview": "npm run build && npx electron . --preview",
     "electron:dist": "npm run build && electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
