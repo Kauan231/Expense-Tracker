@@ -1,6 +1,6 @@
-const { contextBridge, shell } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   platform: process.platform,
-  openFile: (path) => shell.openPath(path),
+  openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 });

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, Notification } = require("electron");
+const { app, BrowserWindow, dialog, Notification, ipcMain, shell } = require("electron");
 const { fork } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -7,6 +7,10 @@ const isPreview = process.argv.includes("--preview");
 if (process.platform === "win32") {
   app.setAppUserModelId("com.kauan.expensetracker");
 }
+
+ipcMain.handle("open-file", async (event, filePath) => {
+  return shell.openPath(filePath);
+});
 
 const logFile = path.join(app.getPath("userData"), "main.log");
 function log(...args) {
@@ -136,10 +140,10 @@ async function createWindow() {
       "../frontend/dist/index.html"
     );
 
-    log("PREVIEW MODE → loading file:", indexPath);
     await mainWindow.loadFile(indexPath);
-
-    mainWindow.webContents.openDevTools();
+    if(isPreview) {
+      mainWindow.webContents.openDevTools();
+    }
   }
 }
 
