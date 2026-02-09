@@ -2,7 +2,28 @@ const { app, BrowserWindow, dialog, Notification, ipcMain, shell } = require("el
 const { fork } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const express = require("express");
+const os = require("os");
+
+function getLocalIP() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "localhost";
+}
+
+const BACKEND_PORT = 3000;
+const BACKEND_HOST = getLocalIP();
+const API_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
+
 const isPreview = process.argv.includes("--preview");
+const isDev = process.argv.includes("--dev");
+const isDebug = process.argv.includes("--debug");
 
 if (process.platform === "win32") {
   app.setAppUserModelId("com.kauan.expensetracker");
@@ -85,7 +106,8 @@ function startBackend(uploadsPath) {
     env: {
       ...process.env,
       UPLOADS_DIR: uploadsPath,
-      SQLITE_PATH: uploadsPath + "/Database/prod.sqlite3"
+      SQLITE_PATH: uploadsPath + "/Database/prod.sqlite3",
+      DEV: isDev
     },
     stdio: "pipe",
   });
@@ -98,6 +120,33 @@ function startBackend(uploadsPath) {
 
   backendProcess.stderr?.on("data", d => {
     log("[BACKEND STDERR]", d.toString());
+  });
+}
+
+let frontendServer;
+function startFrontendServer(apiUrl) {
+  if (frontendServer) return Promise.resolve(5174);
+
+  return new Promise((resolve) => {
+    const server = express();
+    const distPath = path.join(__dirname, "../frontend/dist");
+
+    server.get("/config.js", (_, res) => {
+      res.type("application/javascript");
+      res.send(`window.__CONFIG__ = { API_URL: "${apiUrl}" };`);
+    });
+
+    server.use(express.static(distPath));
+
+    server.get(/.*/, (_, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+
+    const PORT = 5174;
+    frontendServer = server.listen(PORT, () => {
+      log("Frontend running on port", PORT);
+      resolve(PORT);
+    });
   });
 }
 
@@ -141,7 +190,11 @@ async function createWindow() {
     );
 
     await mainWindow.loadFile(indexPath);
-    if(isPreview) {
+    if(isDev) {
+      await startFrontendServer(API_URL);
+    }
+
+    if(isDebug) {
       mainWindow.webContents.openDevTools();
     }
   }
