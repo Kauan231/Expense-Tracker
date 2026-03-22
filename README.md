@@ -3,6 +3,7 @@
 A simple **offline-first desktop expense tracker** built with **Electron**, **Node.js**, and **React.js**.
 
 🎥 **Document Upload Demo Video:** https://youtu.be/988Q8hHytX4
+
 🎥 **Charts Demo Video:** https://youtu.be/KGtl51F_LKw
 
 ExpenseTracker is a project I built to solve a personal need: keeping all my receipts, bills, and recurring invoices organized in one place. The goal is to make financial tracking easier and provide a quick overview of what’s already paid and what’s still pending each month.
@@ -65,6 +66,7 @@ This application helps users:
 O **ExpenseTracker** é um projeto que criei para resolver uma necessidade pessoal: organizar comprovantes, boletos e faturas recorrentes em um só lugar. A ideia foi facilitar meu controle financeiro e ter uma visão rápida do que já foi pago e do que ainda falta no mês.
 
 🎥 **Demo de funcionalidade de upload de documentos:** https://youtu.be/988Q8hHytX4
+
 🎥 **Demo de visualização em gráficos:** https://youtu.be/KGtl51F_LKw
 
 ---
