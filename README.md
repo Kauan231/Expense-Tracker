@@ -94,3 +94,7 @@ npm run electron:dist
 ## 📌 Melhorias Futuras
 - Dashboard com gráficos por categoria
 - Sincronização opcional em nuvem
+
+## Build: 
+
+https://drive.google.com/drive/folders/1aLgcnjPsC9jdDeD91T2jOVGAKyAWeATt?usp=sharing
